@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rank & Reveal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f0e0c; --panel:#1a1815; --panel2:#24211d; --line:#34302a;
+  --ink:#f4efe6; --mute:#9b9387; --accent:#e8b04b; --accent2:#d9643a;
+  --good:#7fb88a; --r:16px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"DM Sans",system-ui,sans-serif;font-size:16px}
+body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);min-height:100vh}
+#app{max-width:520px;margin:0 auto;padding:28px 20px 120px}
+h1,h2,.serif{font-family:"Instrument Serif",Georgia,serif;font-weight:400;letter-spacing:-.01em}
+h1{font-size:44px;line-height:1;margin:0 0 6px}
+h1 em{color:var(--accent)}
+h2{font-size:34px;line-height:1.05;margin:0 0 8px}
+p.sub{color:var(--mute);margin:0 0 24px;line-height:1.45}
+label.lbl{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--mute);margin:22px 0 8px}
+input[type=text]{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:13px 14px;font:inherit;outline:none;transition:border-color .15s}
+input[type=text]:focus{border-color:var(--accent)}
+.row{display:flex;align-items:center;gap:10px}
+.stepper{display:flex;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.stepper button{background:none;border:0;color:var(--ink);font-size:22px;width:48px;height:48px;cursor:pointer}
+.stepper button:active{background:var(--panel2)}
+.stepper span{min-width:40px;text-align:center;font-weight:700;font-size:18px}
+.fields{display:grid;gap:8px;margin-top:10px}
+.field{display:flex;align-items:center;gap:10px}
+.field .n{width:26px;color:var(--mute);font-size:13px;text-align:right;flex:none}
+.btn{display:block;width:100%;border:0;border-radius:14px;padding:16px;font:inherit;font-weight:700;font-size:17px;cursor:pointer;background:var(--accent);color:#1a1205;transition:transform .1s,opacity .2s}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.35;cursor:default}
+.btn.ghost{background:var(--panel);color:var(--ink);border:1px solid var(--line);font-weight:500}
+.btn.small{display:inline-block;width:auto;padding:10px 14px;font-size:14px}
+.dock{position:fixed;left:0;right:0;bottom:0;padding:14px 20px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--bg) 30%)}
+.dock .inner{max-width:520px;margin:0 auto;display:grid;gap:8px}
+.err{color:var(--accent2);font-size:14px;margin-top:10px;min-height:1em}
+
+/* handoff */
+.center{min-height:70vh;display:flex;flex-direction:column;justify-content:center;text-align:center}
+.who{font-family:"Instrument Serif",serif;font-size:64px;line-height:1;color:var(--accent);margin:10px 0 18px;word-break:break-word}
+.progress{display:flex;gap:6px;justify-content:center;margin-bottom:28px;flex-wrap:wrap}
+.progress i{width:28px;height:4px;border-radius:2px;background:var(--line)}
+.progress i.done{background:var(--good)}
+.progress i.now{background:var(--accent)}
+
+/* ranking */
+.ranked{display:grid;gap:8px;margin:14px 0 6px}
+.slot{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 10px 10px 14px;animation:pop .22s ease}
+.slot.empty{border-style:dashed;background:transparent;color:var(--mute);justify-content:center;padding:14px}
+.slot .pos{font-family:"Instrument Serif",serif;font-size:28px;width:32px;color:var(--accent);flex:none;text-align:center}
+.slot .name{flex:1;font-weight:500;word-break:break-word}
+.slot .ctl{display:flex;gap:4px}
+.slot .ctl button{background:var(--panel2);border:0;color:var(--ink);width:34px;height:34px;border-radius:9px;cursor:pointer;font-size:15px}
+.slot .ctl button:disabled{opacity:.25}
+.pool{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:11px 16px;font:inherit;cursor:pointer;animation:pop .22s ease}
+.chip:active{transform:scale(.96);border-color:var(--accent)}
+@keyframes pop{from{transform:scale(.94);opacity:0}to{transform:none;opacity:1}}
+
+/* reveal */
+.board{display:grid;gap:10px;margin:22px 0}
+.card{position:relative;border-radius:var(--r);perspective:900px;min-height:68px}
+.card .face{border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:14px;backface-visibility:hidden;transition:transform .7s cubic-bezier(.2,.8,.2,1);min-height:68px}
+.card .front{background:var(--panel);border:1px solid var(--line)}
+.card .back{position:absolute;inset:0;background:var(--panel2);border:1px solid var(--line);transform:rotateX(180deg)}
+.card.shown .front{transform:rotateX(-180deg)}
+.card.shown .back{transform:rotateX(0)}
+.card .rk{font-family:"Instrument Serif",serif;font-size:34px;width:46px;text-align:center;color:var(--mute);flex:none}
+.card .q{flex:1;height:12px;border-radius:6px;background:repeating-linear-gradient(90deg,var(--line) 0 18px,transparent 18px 26px);opacity:.7}
+.card.next .front{border-color:var(--accent);box-shadow:0 0 0 3px rgba(232,176,75,.12)}
+.card.next .rk{color:var(--accent)}
+.card .info{flex:1;min-width:0}
+.card .title{font-weight:700;font-size:18px;word-break:break-word}
+.card .meta{color:var(--mute);font-size:13px;margin-top:3px}
+.card .pts{font-family:"Instrument Serif",serif;font-size:26px;color:var(--accent);flex:none;text-align:right;line-height:1}
+.card .pts small{display:block;font-family:"DM Sans";font-size:11px;color:var(--mute);letter-spacing:.08em;text-transform:uppercase}
+.card.win{min-height:110px}
+.card.win .face{min-height:110px}
+.card.win .back{background:linear-gradient(135deg,#3a2a10,#2a1a10);border-color:var(--accent);box-shadow:0 10px 40px rgba(232,176,75,.25)}
+.card.win .back .rk{color:var(--accent);font-size:46px}
+.card.win .back .title{font-family:"Instrument Serif",serif;font-weight:400;font-size:34px;line-height:1.05}
+.card.win .front .rk{font-size:46px}
+.dots{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.dots span{font-size:11px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:2px 6px;color:var(--mute)}
+.dots span b{color:var(--ink);font-weight:700}
+
+.overlay{position:fixed;inset:0;background:rgba(10,9,8,.88);display:flex;align-items:center;justify-content:center;z-index:20;backdrop-filter:blur(6px)}
+.count{font-family:"Instrument Serif",serif;font-size:180px;color:var(--accent);animation:beat .9s ease}
+@keyframes beat{0%{transform:scale(.4);opacity:0}30%{transform:scale(1.1);opacity:1}100%{transform:scale(1);opacity:.9}}
+canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:30}
+
+table.ballots{width:100%;border-collapse:collapse;font-size:14px;margin-top:10px}
+table.ballots th,table.ballots td{border-bottom:1px solid var(--line);padding:9px 6px;text-align:left;vertical-align:top}
+table.ballots th{color:var(--mute);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+.scroll{overflow-x:auto}
+.how{color:var(--mute);font-size:13px;line-height:1.5;margin-top:18px}
+.toplink{background:none;border:0;color:var(--mute);font:inherit;font-size:14px;cursor:pointer;padding:0;margin-bottom:18px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<canvas id="fx"></canvas>
+<script>
+const MAXO=20, MAXP=20;
+const app=document.getElementById('app');
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let S={title:'',nOpt:4,nPpl:3,options:['','','',''],people:['','',''],ballots:[],cur:0,working:[],results:null,revealed:0};
+try{const saved=JSON.parse(localStorage.getItem('rr-setup')||'null');if(saved){Object.assign(S,saved);}}catch(e){}
+function saveSetup(){try{localStorage.setItem('rr-setup',JSON.stringify({title:S.title,nOpt:S.nOpt,nPpl:S.nPpl,options:S.options,people:S.people}))}catch(e){}}
+
+function resize(arr,n){arr=arr.slice(0,n);while(arr.length<n)arr.push('');return arr}
+
+/* ---------- SETUP ---------- */
+function setup(){
+  S.options=resize(S.options,S.nOpt);S.people=resize(S.people,S.nPpl);
+  app.innerHTML=`
+    <h1>Rank <em>&amp;</em> Reveal</h1>
+    <p class="sub">Everyone ranks privately, then the group order is revealed from the bottom up.</p>
+    <label class="lbl">What are you deciding? (optional)</label>
+    <input type="text" id="title" placeholder="e.g. Book club reading order" value="${esc(S.title)}">
+    <label class="lbl">Options</label>
+    <div class="row">
+      <div class="stepper"><button data-s="opt" data-d="-1">−</button><span>${S.nOpt}</span><button data-s="opt" data-d="1">+</button></div>
+    </div>
+    <div class="fields" id="optF">${S.options.map((v,i)=>`<div class="field"><span class="n">${i+1}</span><input type="text" data-o="${i}" placeholder="Option ${i+1}" value="${esc(v)}"></div>`).join('')}</div>
+    <label class="lbl">People</label>
+    <div class="row">
+      <div class="stepper"><button data-s="ppl" data-d="-1">−</button><span>${S.nPpl}</span><button data-s="ppl" data-d="1">+</button></div>
+    </div>
+    <div class="fields">${S.people.map((v,i)=>`<div class="field"><span class="n">${i+1}</span><input type="text" data-p="${i}" placeholder="Person ${i+1}" value="${esc(v)}"></div>`).join('')}</div>
+    <div class="err" id="err"></div>
+    <div class="dock"><div class="inner"><button class="btn" id="go">Start ranking</button></div></div>`;
+  app.querySelector('#title').oninput=e=>{S.title=e.target.value;saveSetup()};
+  app.querySelectorAll('[data-o]').forEach(el=>el.oninput=e=>{S.options[+el.dataset.o]=e.target.value;saveSetup()});
+  app.querySelectorAll('[data-p]').forEach(el=>el.oninput=e=>{S.people[+el.dataset.p]=e.target.value;saveSetup()});
+  app.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{
+    const d=+b.dataset.d;
+    if(b.dataset.s==='opt')S.nOpt=Math.max(2,Math.min(MAXO,S.nOpt+d));
+    else S.nPpl=Math.max(1,Math.min(MAXP,S.nPpl+d));
+    saveSetup();setup();
+  });
+  app.querySelector('#go').onclick=start;
+}
+function start(){
+  const opts=S.options.map((v,i)=>v.trim()||`Option ${i+1}`);
+  const lower=opts.map(o=>o.toLowerCase());
+  if(new Set(lower).size!==lower.length){document.getElementById('err').textContent='Two options have the same name — make them unique.';return}
+  S.opts=opts;
+  S.ppl=S.people.map((v,i)=>v.trim()||`Person ${i+1}`);
+  S.ballots=[];S.cur=0;S.results=null;S.revealed=0;
+  handoff();
+}
+
+/* ---------- HANDOFF ---------- */
+function progressBar(){return `<div class="progress">${S.ppl.map((_,i)=>`<i class="${i<S.cur?'done':i===S.cur?'now':''}"></i>`).join('')}</div>`}
+function handoff(){
+  window.scrollTo(0,0);
+  app.innerHTML=`<div class="center">
+    ${progressBar()}
+    <p class="sub" style="margin:0">${S.cur===0?'First up':'Pass the phone to'}</p>
+    <div class="who">${esc(S.ppl[S.cur])}</div>
+    <p class="sub">${S.ppl.length>1?'No peeking at anyone else’s order.':'Rank the options in your order.'}</p>
+    <button class="btn" id="go">I’m ${esc(S.ppl[S.cur])} — let’s rank</button>
+    ${S.cur===0?'<button class="toplink" id="back" style="margin-top:18px">← Edit setup</button>':''}
+  </div>`;
+  app.querySelector('#go').onclick=()=>{S.working=[];rank()};
+  const b=app.querySelector('#back');if(b)b.onclick=setup;
+}
+
+/* ---------- RANK ---------- */
+function rank(){
+  const w=S.working, pool=S.opts.map((_,i)=>i).filter(i=>!w.includes(i));
+  const empties=Math.min(pool.length,1);
+  app.innerHTML=`
+    ${progressBar()}
+    <h2>${esc(S.ppl[S.cur])}’s order</h2>
+    <p class="sub">${S.title?esc(S.title)+' — ':''}tap options in the order you’d pick them. #1 is your top choice.</p>
+    <div class="ranked">
+      ${w.map((oi,k)=>`<div class="slot"><span class="pos">${k+1}</span><span class="name">${esc(S.opts[oi])}</span>
+        <span class="ctl"><button data-up="${k}" ${k===0?'disabled':''} aria-label="Move up">↑</button><button data-dn="${k}" ${k===w.length-1?'disabled':''} aria-label="Move down">↓</button><button data-rm="${k}" aria-label="Remove">✕</button></span></div>`).join('')}
+      ${empties?`<div class="slot empty">Tap below to add #${w.length+1}</div>`:''}
+    </div>
+    ${pool.length?`<label class="lbl">Still to rank · ${pool.length}</label><div class="pool">${pool.map(i=>`<button class="chip" data-add="${i}">${esc(S.opts[i])}</button>`).join('')}</div>`:''}
+    <div class="dock"><div class="inner">
+      <button class="btn" id="lock" ${pool.length?'disabled':''}>${pool.length?`Rank ${pool.length} more`:'Lock in my order'}</button>
+      ${w.length?'<button class="btn ghost" id="clr">Start over</button>':''}
+    </div></div>`;
+  app.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{w.push(+b.dataset.add);
+    const left=S.opts.length-w.length; if(left===1){w.push(S.opts.map((_,i)=>i).find(i=>!w.includes(i)))} rank()});
+  app.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>{const k=+b.dataset.up;[w[k-1],w[k]]=[w[k],w[k-1]];rank()});
+  app.querySelectorAll('[data-dn]').forEach(b=>b.onclick=()=>{const k=+b.dataset.dn;[w[k+1],w[k]]=[w[k],w[k+1]];rank()});
+  app.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{w.splice(+b.dataset.rm,1);rank()});
+  const c=app.querySelector('#clr');if(c)c.onclick=()=>{S.working=[];rank()};
+  app.querySelector('#lock').onclick=()=>{
+    S.ballots[S.cur]=w.slice();S.cur++;
+    if(S.cur<S.ppl.length)handoff();else ready();
+  };
+}
+
+/* ---------- SCORE ---------- */
+function score(){
+  const n=S.opts.length;
+  const rows=S.opts.map((name,i)=>{
+    const places=S.ballots.map(b=>b.indexOf(i)+1);
+    const pts=places.reduce((a,p)=>a+(n-p+1),0);
+    const counts=Array(n).fill(0);places.forEach(p=>counts[p-1]++);
+    return {i,name,places,pts,counts,avg:places.reduce((a,b)=>a+b,0)/places.length};
+  });
+  const cmp=(a,b)=>{if(b.pts!==a.pts)return b.pts-a.pts;for(let k=0;k<n;k++){if(b.counts[k]!==a.counts[k])return b.counts[k]-a.counts[k]}return 0};
+  rows.sort((a,b)=>cmp(a,b)||a.i-b.i);
+  rows.forEach((r,k)=>{
+    if(k>0&&cmp(rows[k-1],r)===0){r.rank=rows[k-1].rank;r.tied=true;rows[k-1].tied=true}else r.rank=k+1;
+  });
+  return rows;
+}
+
+/* ---------- READY ---------- */
+function ready(){
+  S.results=score();S.revealed=0;
+  window.scrollTo(0,0);
+  app.innerHTML=`<div class="center">
+    <div class="progress">${S.ppl.map(()=>'<i class="done"></i>').join('')}</div>
+    <p class="sub" style="margin:0">All ${S.ppl.length} ${S.ppl.length===1?'ballot':'ballots'} in</p>
+    <div class="who" style="font-size:52px">Time for<br>the reveal</div>
+    <p class="sub">We’ll go from last place up to the top pick. Gather round.</p>
+    <button class="btn" id="go">Start the reveal</button>
+  </div>`;
+  app.querySelector('#go').onclick=reveal;
+}
+
+/* ---------- REVEAL ---------- */
+function ordinal(r){return r}
+function reveal(){
+  const R=S.results,n=R.length,maxPts=S.ppl.length*n;
+  const nextIdx=n-1-S.revealed; // index in R (sorted best-first) to reveal next
+  const done=S.revealed>=n;
+  app.innerHTML=`
+    <h2>${S.title?esc(S.title):'The results'}</h2>
+    <p class="sub">${done?'The final order.':`Revealing from the bottom · ${S.revealed} of ${n}`}</p>
+    <div class="board">
+      ${R.map((r,k)=>{
+        const shown=k>nextIdx||done, win=k===0;
+        const label=(r.tied?'=':'')+r.rank;
+        return `<div class="card ${shown?'shown':''} ${win?'win':''} ${(!done&&k===nextIdx)?'next':''}" id="c${k}">
+          <div class="face front"><span class="rk">${label}</span><span class="q"></span></div>
+          <div class="face back"><span class="rk">${label}</span>
+            <div class="info"><div class="title">${esc(r.name)}</div>
+              <div class="dots">${S.ppl.map((p,j)=>`<span>${esc(p)} <b>#${r.places[j]}</b></span>`).join('')}</div></div>
+            <div class="pts">${r.pts}<small>pts</small></div></div>
+        </div>`}).join('')}
+    </div>
+    ${done?`
+      <label class="lbl">Everyone’s ballots</label>
+      <div class="scroll"><table class="ballots"><tr><th>#</th>${S.ppl.map(p=>`<th>${esc(p)}</th>`).join('')}</tr>
+        ${S.opts.map((_,k)=>`<tr><td>${k+1}</td>${S.ballots.map(b=>`<td>${esc(S.opts[b[k]])}</td>`).join('')}</tr>`).join('')}</table></div>
+      <p class="how">Scoring: a #1 pick earns ${n} points, #2 earns ${n-1}, down to 1 point for last. Ties are broken by most first-place votes, then most seconds, and so on. “=” means still tied after that. Max possible: ${maxPts}.</p>
+      <div style="display:grid;gap:8px;margin-top:22px">
+        <button class="btn ghost" id="copy">Copy final order</button>
+        <button class="btn ghost" id="again">Re-rank same options</button>
+        <button class="btn ghost" id="new">New setup</button>
+      </div>`:''}
+    ${!done?`<div class="dock"><div class="inner"><button class="btn" id="next">${nextIdx===0?'Reveal the pick ✦':`Reveal #${R[nextIdx].rank}`}</button></div></div>`:''}`;
+  if(!done){
+    const nx=document.getElementById('c'+nextIdx);
+    if(S.revealed>0)nx.scrollIntoView({behavior:'smooth',block:'center'});
+    app.querySelector('#next').onclick=()=>{
+      if(nextIdx===0)countdown(()=>{flip(0);setTimeout(()=>{confetti();},350);setTimeout(()=>{S.revealed++;reveal();window.scrollTo({top:0,behavior:'smooth'})},1700)});
+      else{flip(nextIdx);setTimeout(()=>{S.revealed++;reveal()},750)}
+    };
+  }else{
+    app.querySelector('#copy').onclick=async e=>{
+      const txt=(S.title?S.title+'\n':'')+S.results.map(r=>`${r.tied?'=':''}${r.rank}. ${r.name} (${r.pts} pts)`).join('\n');
+      try{await navigator.clipboard.writeText(txt);e.target.textContent='Copied ✓'}catch(_){e.target.textContent='Couldn’t copy — long-press the list instead'}
+    };
+    app.querySelector('#again').onclick=()=>{S.ballots=[];S.cur=0;handoff()};
+    app.querySelector('#new').onclick=setup;
+  }
+}
+function flip(k){const c=document.getElementById('c'+k);c.classList.remove('next');c.classList.add('shown')}
+function countdown(cb){
+  const o=document.createElement('div');o.className='overlay';document.body.appendChild(o);
+  let k=3;const tick=()=>{if(k===0){o.remove();document.getElementById('c0').scrollIntoView({behavior:'smooth',block:'center'});setTimeout(cb,350);return}
+    o.innerHTML=`<div class="count">${k}</div>`;k--;setTimeout(tick,850)};tick();
+}
+
+/* ---------- CONFETTI ---------- */
+function confetti(){
+  const cv=document.getElementById('fx'),ctx=cv.getContext('2d'),dpr=window.devicePixelRatio||1;
+  cv.width=innerWidth*dpr;cv.height=innerHeight*dpr;ctx.scale(dpr,dpr);
+  const cols=['#e8b04b','#d9643a','#f4efe6','#7fb88a','#c98bd6'];
+  const P=Array.from({length:160},()=>({x:innerWidth/2+(Math.random()-.5)*80,y:innerHeight*.45,vx:(Math.random()-.5)*14,vy:-Math.random()*14-4,
+    s:Math.random()*7+4,r:Math.random()*6,vr:(Math.random()-.5)*.3,c:cols[Math.random()*cols.length|0],life:0}));
+  let t=0;(function f(){ctx.clearRect(0,0,innerWidth,innerHeight);t++;
+    P.forEach(p=>{p.vy+=.32;p.vx*=.99;p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);ctx.fillStyle=p.c;ctx.globalAlpha=Math.max(0,1-t/170);ctx.fillRect(-p.s/2,-p.s/4,p.s,p.s/2);ctx.restore()});
+    if(t<170)requestAnimationFrame(f);else ctx.clearRect(0,0,innerWidth,innerHeight)})();
+}
+
+setup();
+</script>
+</body>
+</html>
